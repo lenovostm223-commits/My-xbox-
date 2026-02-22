@@ -1,8 +1,23 @@
+
 #!/usr/bin/env python3
 """
-Xbox Account Checker Bot - Render Optimized Version
-Educational Purpose Only
+Xbox Account Checker Bot for Telegram
+Educational Purpose Only - Simplified version without client IDs/secrets
+Uses public APIs and web scraping for information gathering
 """
+
+# 🔴 YEH NAYI LINES ADD KARO (imports se pehle)
+import sys
+import telegram
+print(f"Telegram version installed: {telegram.__version__}")
+
+if not telegram.__version__.startswith('20.'):
+    print("❌ WRONG TELEGRAM VERSION! Expected 20.x, got", telegram.__version__)
+    print("🔄 Run: pip uninstall python-telegram-bot && pip install python-telegram-bot==20.7")
+    sys.exit(1)
+else:
+    print(f"✅ Telegram version {telegram.__version__} is correct")
+# 🔴 YAHAN TAK NAYI LINE ADD KARO
 
 import os
 import sys
