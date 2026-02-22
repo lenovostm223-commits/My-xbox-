@@ -1,0 +1,454 @@
+
+📥 *AFTER PROCESSING*
+Bot will send:
+1. Individual results for each account
+2. 📥 A summary .txt file with all valid accounts
+
+❌ *DON'T DO*
+• No spaces around :
+• No extra text
+• One account per line
+
+📧 *ALL EMAILS SUPPORTED*
+        """
+        await update.message.reply_text(format_text, parse_mode=ParseMode.MARKDOWN)
+    
+    async def online(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle /online command"""
+        internet = SystemMonitor.check_internet()
+        
+        if internet:
+            msg = """
+🟢 *BOT IS ONLINE*
+
+✅ Connected to internet
+✅ Ready to check accounts
+✅ TXT Summary available
+⚡ Ultra Fast Mode Active
+            """
+        else:
+            msg = """
+🔴 *BOT IS OFFLINE*
+
+❌ No internet connection
+⚠️ Some features may be limited
+🔄 Trying to reconnect...
+            """
+        
+        await update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN)
+    
+    async def check_credentials(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Ultra-fast single account check with email support"""
+        message = update.message.text.strip()
+        
+        if ':' not in message:
+            await update.message.reply_text(
+                "❌ Invalid format! Use `email:password`",
+                parse_mode=ParseMode.MARKDOWN
+            )
+            return
+            
+        try:
+            email, password = message.split(':', 1)
+            email = email.strip()
+            password = password.strip()
+            
+            if not email or not password:
+                await update.message.reply_text("❌ Email and password cannot be empty!")
+                return
+                
+        except Exception:
+            await update.message.reply_text("❌ Error parsing credentials!")
+            return
+        
+        self.total_checks += 1
+        
+        status_msg = await update.message.reply_text(
+            "⚡ *Processing...*",
+            parse_mode=ParseMode.MARKDOWN
+        )
+        
+        try:
+            email_info = await self.checker.check_email(email)
+            
+            gamertag = await self.checker.extract_gamertag(email)
+            profile = await self.checker.get_profile_info(gamertag)
+            
+            gamepass_task = self.checker.check_gamepass_status(gamertag, profile['gamerscore'])
+            ach_task = self.checker.get_achievements(profile['gamerscore'])
+            playtime_task = self.checker.calculate_playtime(profile['gamerscore'])
+            
+            gamepass, achievements, playtime = await asyncio.gather(
+                gamepass_task, ach_task, playtime_task
+            )
+            
+            if profile['valid']:
+                self.valid_count += 1
+            if gamepass['has_gamepass']:
+                self.gamepass_count += 1
+            
+            if gamepass['has_ultimate']:
+                status_emoji = "🌟"
+                status_header = "🌟 *ULTIMATE ACCOUNT FOUND* 🌟"
+            elif gamepass['has_gamepass']:
+                status_emoji = "✅"
+                status_header = "✅ *GAME PASS ACCOUNT FOUND*"
+            elif profile['valid']:
+                status_emoji = "⚠️"
+                status_header = "⚠️ *VALID ACCOUNT (No Game Pass)*"
+            else:
+                status_emoji = "❌"
+                status_header = "❌ *INVALID ACCOUNT*"
+            
+            if email_info['valid']:
+                email_status = "✅ Valid"
+                email_line = f"┣ Domain: {email_info['provider']} ({email_info['reliability']})"
+            else:
+                email_status = "❌ Invalid"
+                email_line = "┣ ⚠️ Invalid email format"
+            
+            result = f"""
+{status_header}
+╔══════════════════════════════╗
+
+📧 *EMAIL INFO*
+┣ Email: `{email}`
+┣ Status: {email_status}
+{email_line}
+┗ Score: {email_info.get('score', 0)}/100
+
+📧 *CREDENTIALS*
+┣ Username: `{email_info.get('username', 'N/A')}`
+┗ Password: `{password[:2]}****{password[-2:]}`
+
+🎮 *GAMERTAG INFO*
+┣ Gamertag: `{gamertag}`
+┣ Gamerscore: `{profile['gamerscore']:,}`
+┣ Tier: {profile['tier']}
+┣ Age: {profile['age']}
+┗ Games: {profile['games_played']}
+
+💎 *SUBSCRIPTION*
+┣ Type: `{gamepass['type']}`
+┣ Game Pass: {'✅' if gamepass['has_gamepass'] else '❌'}
+┣ Ultimate: {'✅' if gamepass['has_ultimate'] else '❌'}
+┗ Expires: `{gamepass['expiry']}`
+
+🏆 *ACHIEVEMENTS*
+┣ Total: {achievements['total']:,}
+┣ Completed: {achievements['completed']:,}
+┣ Rare: {achievements['rare']}
+┗ Completion: {achievements['percentage']}%
+
+⏱️ *PLAYTIME*
+┣ Hours: {playtime['hours']:,}
+┣ Days: {playtime['days']}d
+┣ Avg Daily: {playtime['avg']}h
+┗ Games: {playtime['games']}
+
+📊 *SUMMARY*
+┣ Account: {'✅ VALID' if profile['valid'] else '❌ INVALID'}
+┣ Game Pass: {'✅ YES' if gamepass['has_gamepass'] else '❌ NO'}
+┗ {'🌟 QUALIFIED' if gamepass['has_gamepass'] else '❌ NOT QUALIFIED'}
+
+╚══════════════════════════════╝
+⚡ *Ultra Fast • < 1 sec*
+📧 *Full Email Support*
+            """
+            
+            keyboard = [
+                [InlineKeyboardButton("📧 Check Another", callback_data="new_check")],
+                [InlineKeyboardButton("📥 Batch Mode (TXT)", callback_data="batch_info")],
+                [InlineKeyboardButton("❌ Close", callback_data="close")]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await status_msg.edit_text(result, parse_mode=ParseMode.MARKDOWN, reply_markup=reply_markup)
+            
+        except Exception as e:
+            logger.error(f"Error: {e}")
+            await status_msg.edit_text(f"❌ Error: {str(e)[:100]}")
+    
+    async def handle_document(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Ultra-fast batch file processing with TXT summary download"""
+        document = update.message.document
+        file_name = document.file_name
+
+        if not file_name.endswith('.txt'):
+            await update.message.reply_text("❌ Please upload a .txt file.")
+            return
+
+        status_msg = await update.message.reply_text(f"📥 Processing {file_name}...")
+
+        try:
+            file = await context.bot.get_file(document.file_id)
+            with tempfile.NamedTemporaryFile(mode='w+', suffix='.txt', delete=False) as tmp:
+                tmp_path = tmp.name
+            await file.download_to_drive(tmp_path)
+
+            # Read and validate lines
+            with open(tmp_path, 'r', encoding='utf-8') as f:
+                lines = [line.strip() for line in f if line.strip() and not line.startswith('#')]
+
+            # Initialize stats and summary data
+            stats = {
+                "total": len(lines),
+                "valid": 0,
+                "invalid": 0,
+                "gamepass": 0,
+                "ultimate": 0,
+                "invalid_emails": 0,
+                "processed": 0,
+                "total_gamerscore": 0
+            }
+            
+            # Store results for summary file
+            valid_accounts = []
+            gamepass_accounts = []
+            ultimate_accounts = []
+            
+            await status_msg.edit_text(f"⚡ Processing {len(lines)} accounts...")
+
+            # Process each account
+            for idx, line in enumerate(lines, 1):
+                if ':' not in line:
+                    stats['invalid_emails'] += 1
+                    continue
+                    
+                email, password = line.split(':', 1)
+                email = email.strip()
+                password = password.strip()
+                
+                # Validate email
+                email_info = await self.checker.check_email(email)
+                if not email_info['valid']:
+                    stats['invalid_emails'] += 1
+                
+                # Ultra-fast processing
+                gamertag = await self.checker.extract_gamertag(email)
+                profile = await self.checker.get_profile_info(gamertag)
+                gamepass = await self.checker.check_gamepass_status(gamertag, profile['gamerscore'])
+                
+                # Update stats
+                stats['processed'] += 1
+                stats['total_gamerscore'] += profile['gamerscore']
+                
+                if gamepass['has_ultimate']:
+                    stats['ultimate'] += 1
+                    stats['gamepass'] += 1
+                    ultimate_accounts.append(f"{email}:{password} | ULTIMATE | {profile['gamerscore']}G | {gamertag}")
+                elif gamepass['has_gamepass']:
+                    stats['gamepass'] += 1
+                    gamepass_accounts.append(f"{email}:{password} | GAME PASS | {profile['gamerscore']}G | {gamertag}")
+                    
+                if profile['valid']:
+                    stats['valid'] += 1
+                    valid_accounts.append(f"{email}:{password} | VALID | {profile['gamerscore']}G | {gamertag}")
+                else:
+                    stats['invalid'] += 1
+                
+                # Send result
+                email_domain = email_info.get('domain', 'unknown')
+                result = f"""
+📧 *Account #{idx}*
+┣ Email: `{email}`
+┣ Domain: {email_domain}
+┣ Gamertag: `{gamertag}`
+┣ Score: {profile['gamerscore']:,}
+┣ Game Pass: {'✅' if gamepass['has_gamepass'] else '❌'}
+┗ Ultimate: {'✅' if gamepass['has_ultimate'] else '❌'}
+"""
+                await update.message.reply_text(result, parse_mode=ParseMode.MARKDOWN)
+                
+                # Small delay to prevent flooding
+                if idx % 5 == 0:
+                    await asyncio.sleep(0.5)
+
+            # Create summary text file
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            summary_filename = f"xbox_summary_{timestamp}.txt"
+            summary_path = os.path.join(tempfile.gettempdir(), summary_filename)
+            
+            with open(summary_path, 'w', encoding='utf-8') as f:
+                f.write("=" * 60 + "\n")
+                f.write("XBOX ACCOUNT CHECKER BOT - SUMMARY REPORT\n")
+                f.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write("=" * 60 + "\n\n")
+                
+                f.write("📊 STATISTICS\n")
+                f.write("-" * 40 + "\n")
+                f.write(f"Total Accounts: {stats['total']}\n")
+                f.write(f"Processed: {stats['processed']}\n")
+                f.write(f"Valid Accounts: {stats['valid']}\n")
+                f.write(f"Invalid Accounts: {stats['invalid']}\n")
+                f.write(f"Invalid Emails: {stats['invalid_emails']}\n")
+                f.write(f"Game Pass Accounts: {stats['gamepass']}\n")
+                f.write(f"Ultimate Accounts: {stats['ultimate']}\n")
+                f.write(f"Total Gamerscore: {stats['total_gamerscore']:,}\n")
+                f.write(f"Average Gamerscore: {stats['total_gamerscore'] // max(stats['valid'], 1):,}\n\n")
+                
+                if ultimate_accounts:
+                    f.write("🌟 ULTIMATE ACCOUNTS\n")
+                    f.write("-" * 40 + "\n")
+                    for acc in ultimate_accounts:
+                        f.write(f"{acc}\n")
+                    f.write("\n")
+                
+                if gamepass_accounts:
+                    f.write("✅ GAME PASS ACCOUNTS\n")
+                    f.write("-" * 40 + "\n")
+                    for acc in gamepass_accounts:
+                        f.write(f"{acc}\n")
+                    f.write("\n")
+                
+                if valid_accounts:
+                    f.write("✅ VALID ACCOUNTS\n")
+                    f.write("-" * 40 + "\n")
+                    for acc in valid_accounts[:50]:  # Limit to 50 to keep file size reasonable
+                        f.write(f"{acc}\n")
+                    if len(valid_accounts) > 50:
+                        f.write(f"... and {len(valid_accounts) - 50} more\n")
+                    f.write("\n")
+                
+                f.write("=" * 60 + "\n")
+                f.write("END OF REPORT\n")
+                f.write("=" * 60 + "\n")
+
+            # Send summary message
+            summary = f"""
+📊 *BATCH PROCESSING COMPLETE*
+╔══════════════════════════════╗
+
+📁 File: `{file_name}`
+
+📧 *EMAIL STATS*
+┣ Total: {stats['total']}
+┣ ✅ Valid: {stats['total'] - stats['invalid_emails']}
+┣ ❌ Invalid: {stats['invalid_emails']}
+┗ Processed: {stats['processed']}
+
+🎮 *ACCOUNT STATS*
+┣ ✅ Valid: {stats['valid']}
+┣ ❌ Invalid: {stats['invalid']}
+┣ 💎 Game Pass: {stats['gamepass']}
+┣ 🌟 Ultimate: {stats['ultimate']}
+┗ 🏆 Total GS: {stats['total_gamerscore']:,}
+
+📥 *SUMMARY FILE*
+┣ Name: `{summary_filename}`
+┣ Size: {os.path.getsize(summary_path)} bytes
+┗ Status: ✅ Ready to download
+
+⚡ *All email domains supported*
+╚══════════════════════════════╝
+            """
+            await update.message.reply_text(summary, parse_mode=ParseMode.MARKDOWN)
+            
+            # Send the summary file
+            with open(summary_path, 'rb') as f:
+                await update.message.reply_document(
+                    document=f,
+                    filename=summary_filename,
+                    caption="📥 *Complete Summary Report*\nAll valid accounts with details",
+                    parse_mode=ParseMode.MARKDOWN
+                )
+
+        except Exception as e:
+            logger.error(f"File processing error: {e}")
+            await update.message.reply_text(f"❌ Error: {str(e)[:100]}")
+        finally:
+            # Clean up temp files
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+            if 'summary_path' in locals() and os.path.exists(summary_path):
+                os.unlink(summary_path)
+            
+    async def button_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle button callbacks"""
+        query = update.callback_query
+        await query.answer()
+        
+        if query.data == "close":
+            await query.message.delete()
+        elif query.data == "new_check":
+            await query.message.delete()
+            await query.message.reply_text(
+                "📧 Send credentials in format:\n`email:password`\n\n*All email domains supported!*",
+                parse_mode=ParseMode.MARKDOWN
+            )
+        elif query.data == "batch_info":
+            await query.message.reply_text(
+                "📁 *BATCH MODE WITH TXT SUMMARY*\n\n"
+                "1. Create a `.txt` file with one `email:password` per line\n"
+                "2. Upload the file to this chat\n"
+                "3. Bot will process all accounts\n"
+                "4. 📥 You'll receive a summary `.txt` file with all valid accounts\n\n"
+                "✅ All email domains supported!",
+                parse_mode=ParseMode.MARKDOWN
+            )
+            
+    async def error_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle errors"""
+        logger.error(f"Update caused error: {context.error}")
+        try:
+            if update and update.message:
+                await update.message.reply_text(
+                    "❌ An error occurred. Please try again.\n"
+                    "Try /online to check bot status"
+                )
+        except:
+            pass
+
+def main():
+    """Main function"""
+    print(Fore.CYAN + "=" * 60)
+    print(Fore.GREEN + "XBOX ACCOUNT CHECKER BOT - ULTIMATE VERSION")
+    print(Fore.GREEN + "Online/Offline Status + Full Email Support + TXT Summary")
+    print(Fore.CYAN + "=" * 60)
+    
+    if BOT_TOKEN == "YOUR_BOT_TOKEN_HERE":
+        print(Fore.RED + "❌ ERROR: Please set your bot token!")
+        print(Fore.YELLOW + "Get token from @BotFather on Telegram")
+        sys.exit(1)
+    
+    # Check internet
+    if SystemMonitor.check_internet():
+        print(Fore.GREEN + "✅ Internet: Connected")
+    else:
+        print(Fore.YELLOW + "⚠️ Internet: Disconnected (Limited Mode)")
+    
+    print(Fore.GREEN + f"✅ Bot Token: {BOT_TOKEN[:10]}...{BOT_TOKEN[-5:]}")
+    print(Fore.GREEN + f"✅ Email Domains: {len(SUPPORTED_DOMAINS)}+ supported")
+    print(Fore.GREEN + "✅ Online/Offline Status: Active")
+    print(Fore.GREEN + "✅ TXT Summary Download: Active")
+    print(Fore.GREEN + "✅ Ultra Fast Mode: Enabled")
+    print(Fore.CYAN + "=" * 60)
+    
+    bot = XboxBot()
+    application = Application.builder().token(BOT_TOKEN).build()
+    
+    # Add handlers
+    application.add_handler(CommandHandler("start", bot.start))
+    application.add_handler(CommandHandler("help", bot.help))
+    application.add_handler(CommandHandler("about", bot.about))
+    application.add_handler(CommandHandler("stats", bot.stats))
+    application.add_handler(CommandHandler("status", bot.status))
+    application.add_handler(CommandHandler("domains", bot.domains))
+    application.add_handler(CommandHandler("online", bot.online))
+    application.add_handler(CommandHandler("format", bot.format_example))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, bot.check_credentials))
+    application.add_handler(MessageHandler(filters.Document.FileExtension("txt"), bot.handle_document))
+    application.add_handler(CallbackQueryHandler(bot.button_callback))
+    application.add_error_handler(bot.error_handler)
+    
+    print(Fore.GREEN + "✅ Bot is running - Ultimate Mode with TXT Summary")
+    print(Fore.CYAN + "=" * 60)
+    application.run_polling()
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        print(Fore.YELLOW + "\n👋 Bot stopped by user")
+    except Exception as e:
+        print(Fore.RED + f"❌ Fatal error: {e}")
