@@ -35,7 +35,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Bot configuration - CHANGE THIS
-BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"  # <-- Apna token yahan daalo
+BOT_TOKEN = "8330121440:AAFM_ywFcmCO8yqR0MEyL0fhQ0fPPMuauDk"  # <-- Apna token yahan daalo
 
 # Xbox public API endpoints
 XBOX_PUBLIC_API = {
@@ -378,3 +378,216 @@ Made for educational purposes
 `gamer123@hotmail.com:password123`
 
 ✅ *Batch (.txt file):*
+        
+*Send exactly:* `email:password`
+        """
+        await update.message.reply_text(format_text, parse_mode=ParseMode.MARKDOWN)
+    
+    async def check_credentials(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle single credential checking"""
+        message = update.message.text.strip()
+        
+        if ':' not in message:
+            await update.message.reply_text("❌ Invalid format! Use `email:password`", parse_mode=ParseMode.MARKDOWN)
+            return
+            
+        try:
+            email, password = message.split(':', 1)
+            email = email.strip()
+            password = password.strip()
+            
+            if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+                await update.message.reply_text("❌ Invalid email format!")
+                return
+                
+            if not password:
+                await update.message.reply_text("❌ Password cannot be empty!")
+                return
+                
+        except Exception:
+            await update.message.reply_text("❌ Error parsing credentials!")
+            return
+            
+        status_msg = await update.message.reply_text("🔄 *Analyzing account...*", parse_mode=ParseMode.MARKDOWN)
+        
+        try:
+            gamertag = await self.checker.extract_gamertag(email)
+            profile = await self.checker.get_profile_info(gamertag)
+            gamepass = await self.checker.check_gamepass_status(gamertag)
+            achievements = await self.checker.get_achievement_info(gamertag)
+            playtime = await self.checker.estimate_playtime(gamertag, profile['gamerscore'])
+            
+            status_emoji = "✅" if gamepass['has_gamepass'] else "❌"
+            account_status = "GAME PASS FOUND" if gamepass['has_gamepass'] else "NO GAME PASS"
+                
+            result = f"""
+🎮 *XBOX ACCOUNT CHECKER* 🎮
+═══════════════════════════════
+
+{status_emoji} *{account_status}*
+
+📧 *CREDENTIALS:*
+Email: {email}
+Password: {password[:2]}****{password[-2:]}
+
+🎮 *GAMERTAG INFO:*
+Gamertag: {gamertag}
+Tier: {profile['tier']}
+Gamerscore: {profile['gamerscore']:,}
+
+💎 *SUBSCRIPTION:*
+Type: {gamepass['subscription_type']}
+Game Pass: {'✅' if gamepass['has_gamepass'] else '❌'}
+Ultimate: {'✅' if gamepass['has_ultimate'] else '❌'}
+
+⏱️ *PLAYTIME:*
+Total Hours: {playtime['total_hours']:,}
+──────────────────
+            """
+            await status_msg.edit_text(result, parse_mode=ParseMode.MARKDOWN)
+            
+        except Exception as e:
+            logger.error(f"Error checking account: {e}")
+            await status_msg.edit_text(f"❌ Error: {str(e)[:100]}")
+    
+    async def handle_document(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle .txt file upload with email:password lines"""
+        document = update.message.document
+        file_name = document.file_name
+
+        if not file_name.endswith('.txt'):
+            await update.message.reply_text("❌ Please upload a .txt file.")
+            return
+
+        status_msg = await update.message.reply_text(f"📥 Downloading file: {file_name}...")
+
+        try:
+            file = await context.bot.get_file(document.file_id)
+            with tempfile.NamedTemporaryFile(mode='w+', suffix='.txt', delete=False) as tmp:
+                tmp_path = tmp.name
+            await file.download_to_drive(tmp_path)
+
+            await status_msg.edit_text("✅ File downloaded. Reading accounts...")
+
+            with open(tmp_path, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+
+            valid_count = 0
+            invalid_count = 0
+            gamepass_count = 0
+            ultimate_count = 0
+
+            await status_msg.edit_text(f"📊 Processing {len(lines)} accounts...")
+
+            for idx, line in enumerate(lines, 1):
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+
+                if ':' not in line:
+                    await update.message.reply_text(f"⚠️ Line {idx} skipped (invalid format)")
+                    continue
+
+                email, password = line.split(':', 1)
+                email = email.strip()
+                password = password.strip()
+
+                gamertag = await self.checker.extract_gamertag(email)
+                profile = await self.checker.get_profile_info(gamertag)
+                gamepass = await self.checker.check_gamepass_status(gamertag)
+
+                if gamepass['has_ultimate']:
+                    ultimate_count += 1
+                    gamepass_count += 1
+                elif gamepass['has_gamepass']:
+                    gamepass_count += 1
+
+                if profile['gamerscore'] > 0:
+                    valid_count += 1
+                else:
+                    invalid_count += 1
+
+                result_text = f"""
+📧 *Account {idx}:* `{email}`
+🎮 Gamertag: `{gamertag}`
+💎 Game Pass: {'✅' if gamepass['has_gamepass'] else '❌'}
+🌟 Ultimate: {'✅' if gamepass['has_ultimate'] else '❌'}
+🏆 Gamerscore: {profile['gamerscore']:,}
+──────────────────
+"""
+                await update.message.reply_text(result_text, parse_mode=ParseMode.MARKDOWN)
+                await asyncio.sleep(1)
+
+            summary = f"""
+📊 *File Processing Complete*
+──────────────────
+📁 File: {file_name}
+📄 Total lines: {len(lines)}
+✅ Valid: {valid_count}
+❌ Invalid: {invalid_count}
+💎 Game Pass: {gamepass_count}
+🌟 Ultimate: {ultimate_count}
+──────────────────
+            """
+            await update.message.reply_text(summary, parse_mode=ParseMode.MARKDOWN)
+
+        except Exception as e:
+            logger.error(f"File processing error: {e}")
+            await update.message.reply_text(f"❌ Error: {str(e)[:100]}")
+        finally:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+            
+    async def button_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle button callbacks"""
+        query = update.callback_query
+        await query.answer()
+        
+        if query.data == "close":
+            await query.message.delete()
+        elif query.data == "new_check":
+            await query.message.delete()
+            await query.message.reply_text("📝 Send credentials in format:\n`email:password`", parse_mode=ParseMode.MARKDOWN)
+            
+    async def error_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle errors"""
+        logger.error(f"Update {update} caused error {context.error}")
+        try:
+            if update and update.message:
+                await update.message.reply_text("❌ An error occurred. Please try again later.")
+        except:
+            pass
+
+def main():
+    """Main function to run the bot"""
+    print("=" * 50)
+    print("XBOX ACCOUNT CHECKER BOT")
+    print("=" * 50)
+    
+    if BOT_TOKEN == "YOUR_BOT_TOKEN_HERE":
+        print("❌ ERROR: Please set your bot token!")
+        sys.exit(1)
+        
+    bot = XboxBot()
+    application = Application.builder().token(BOT_TOKEN).build()
+    
+    # Add handlers
+    application.add_handler(CommandHandler("start", bot.start))
+    application.add_handler(CommandHandler("help", bot.help))
+    application.add_handler(CommandHandler("about", bot.about))
+    application.add_handler(CommandHandler("format", bot.format_example))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, bot.check_credentials))
+    application.add_handler(MessageHandler(filters.Document.FileExtension("txt"), bot.handle_document))
+    application.add_handler(CallbackQueryHandler(bot.button_callback))
+    application.add_error_handler(bot.error_handler)
+    
+    print("✅ Bot is running!")
+    application.run_polling()
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\n👋 Bot stopped by user")
+    except Exception as e:
+        print(f"❌ Fatal error: {e}")
