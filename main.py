@@ -162,24 +162,24 @@ class XboxBot:
         self.processing = False
         self.stats = defaultdict(int)
           
-        async def handle_document(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Handle .txt file upload with email:password lines"""
-        document = update.message.document
-        file_name = document.file_name
+            async def handle_document(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+            """Handle .txt file upload with email:password lines"""
+            document = update.message.document
+            file_name = document.file_name
 
-        if not file_name.endswith('.txt'):
+            if not file_name.endswith('.txt'):
             await update.message.reply_text("❌ Please upload a .txt file.")
             return
 
-        status_msg = await update.message.reply_text(f"📥 Downloading file: {file_name}...")
+            status_msg = await update.message.reply_text(f"📥 Downloading file: {file_name}...")
 
-        try:
-            file = await context.bot.get_file(document.file_id)
-            with tempfile.NamedTemporaryFile(mode='w+', suffix='.txt', delete=False) as tmp:
-                tmp_path = tmp.name
-            await file.download_to_drive(tmp_path)
+            try:
+                file = await context.bot.get_file(document.file_id)
+                with tempfile.NamedTemporaryFile(mode='w+', suffix='.txt', delete=False) as tmp:
+                    tmp_path = tmp.name
+                await file.download_to_drive(tmp_path)
 
-            await status_msg.edit_text(f"✅ File downloaded. Reading accounts...")
+                await status_msg.edit_text(f"✅ File downloaded. Reading accounts...")
 
             with open(tmp_path, 'r', encoding='utf-8') as f:
                 lines = f.readlines()
