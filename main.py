@@ -19,7 +19,9 @@ else:
     print(f"✅ Telegram version {telegram.__version__} is correct")
 # 🔴 YAHAN TAK NAYI LINE ADD KARO
 
+
 import os
+import tempfile
 import sys
 import json
 import logging
@@ -159,7 +161,98 @@ class XboxBot:
         self.checker = AccountChecker()
         self.processing = False
         self.stats = defaultdict(int)
-        
+          
+        async def handle_document(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle .txt file upload with email:password lines"""
+        document = update.message.document
+        file_name = document.file_name
+
+        if not file_name.endswith('.txt'):
+            await update.message.reply_text("❌ Please upload a .txt file.")
+            return
+
+        status_msg = await update.message.reply_text(f"📥 Downloading file: {file_name}...")
+
+        try:
+            file = await context.bot.get_file(document.file_id)
+            with tempfile.NamedTemporaryFile(mode='w+', suffix='.txt', delete=False) as tmp:
+                tmp_path = tmp.name
+            await file.download_to_drive(tmp_path)
+
+            await status_msg.edit_text(f"✅ File downloaded. Reading accounts...")
+
+            with open(tmp_path, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+
+            valid_count = 0
+            invalid_count = 0
+            gamepass_count = 0
+            ultimate_count = 0
+
+            await status_msg.edit_text(f"📊 Processing {len(lines)} accounts...")
+
+            for idx, line in enumerate(lines, 1):
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+
+                if ':' not in line:
+                    await update.message.reply_text(f"⚠️ Line {idx} skipped (invalid format): {line[:50]}")
+                    continue
+
+                email, password = line.split(':', 1)
+                email = email.strip()
+                password = password.strip()
+
+                # Process account
+                gamertag = await self.checker.extract_gamertag(email)
+                profile = await self.checker.get_profile_info(gamertag)
+                gamepass = await self.checker.check_gamepass_status(gamertag)
+                achievements = await self.checker.get_achievement_info(gamertag)
+                playtime = await self.checker.estimate_playtime(gamertag, profile['gamerscore'])
+
+                if gamepass['has_ultimate']:
+                    ultimate_count += 1
+                    gamepass_count += 1
+                elif gamepass['has_gamepass']:
+                    gamepass_count += 1
+
+                if profile['gamerscore'] > 0:
+                    valid_count += 1
+                else:
+                    invalid_count += 1
+
+                result_text = f"""
+📧 *Account {idx}:* `{email}`
+🎮 Gamertag: `{gamertag}`
+💎 Game Pass: {'✅' if gamepass['has_gamepass'] else '❌'}
+🌟 Ultimate: {'✅' if gamepass['has_ultimate'] else '❌'}
+🏆 Gamerscore: {profile['gamerscore']:,}
+⏱️ Playtime: {playtime['total_hours']}h
+──────────────────
+"""
+                await update.message.reply_text(result_text, parse_mode=ParseMode.MARKDOWN)
+                await asyncio.sleep(1)  # Delay to avoid flooding
+
+            summary = f"""
+📊 *File Processing Complete*
+──────────────────
+📁 File: {file_name}
+📄 Total lines: {len(lines)}
+✅ Valid accounts: {valid_count}
+❌ Invalid: {invalid_count}
+💎 Game Pass: {gamepass_count}
+🌟 Ultimate: {ultimate_count}
+──────────────────
+            """
+            await update.message.reply_text(summary, parse_mode=ParseMode.MARKDOWN)
+
+        except Exception as e:
+            logger.error(f"File processing error: {e}")
+            await update.message.reply_text(f"❌ Error processing file: {str(e)}")
+        finally:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path  
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle /start"""
         welcome = """
@@ -169,10 +262,12 @@ class XboxBot:
 ✅ *Render Optimized Version*
 ✅ *Ready to Use*
 
-📤 *Send multiple accounts:*
+📤 *Send for single accounts:*
+*send txt file for multiple accounts*
 `email1:password1`
 `email2:password2`
 `email3:password3`
+
 
 🔍 *Features:*
 • 🟢 Online/Offline Status
@@ -486,6 +581,15 @@ def main():
     bot = XboxBot()
     
     # Add handlers
+       # Add handlers (yahaan pe)
+    application.add_handler(CommandHandler("start", bot.start))
+    application.add_handler(CommandHandler("help", bot.help))
+    application.add_handler(CommandHandler("about", bot.about))
+    application.add_handler(CommandHandler("format", bot.format_example))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, bot.check_credentials))
+    application.add_handler(MessageHandler(filters.Document.FileExtension("txt"), bot.handle_document))  # <-- YEH LINE ADD KARO
+    application.add_handler(CallbackQueryHandler(bot.button_callback))
+    application.add_error_handler(bot.error_handler)
     app.add_handler(CommandHandler("start", bot.start))
     app.add_handler(CommandHandler("help", bot.help))
     app.add_handler(CommandHandler("stats", bot.stats))
