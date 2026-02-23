@@ -1139,3 +1139,566 @@ I'm the most advanced Xbox account checker with **30+ data points** per account!
 
 📁 *File Format Example*
 ══════════════════════════════════════════════════════
+            
+✨ *Features Included*
+══════════════════════════════════════════════════════
+✅ Basic Profile (Gamertag, XUID, Gamerscore)
+✅ Subscription (Ultimate/Game Pass/Gold)
+✅ Gaming Stats (Playtime, Games, Achievements)
+✅ Achievement Details (Rare/Epic/Legendary)
+✅ Social Data (Friends, Followers, Clubs)
+✅ Media Stats (Screenshots, Clips)
+✅ Account Value Calculator
+✅ Professional Reports
+✅ Batch Processing (500 accounts)
+✅ Downloadable Results
+
+📋 *Commands*
+══════════════════════════════════════════════════════
+/start  - Welcome message
+/help   - Detailed help
+/status - Your usage stats
+/about  - Bot information
+/features - All features list
+
+⚡ *Daily Limit:* 10,000 requests • Batch: 500 accounts
+══════════════════════════════════════════════════════
+        """
+        await update.message.reply_text(welcome, parse_mode=ParseMode.MARKDOWN)
+    
+    async def features(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Show all features"""
+        features_text = """
+📋 *COMPLETE FEATURE LIST - 30+ DATA POINTS*
+══════════════════════════════════════════════
+
+🎮 *Profile Information (10)*
+├ 🏷️ Gamertag (current, history, changes)
+├ 🆔 XUID (Unique Identifier)
+├ 📅 Join Date & Account Age
+├ 📍 Location (City, Country, Timezone)
+├ 📝 Bio
+├ ⭐ Reputation Score
+├ 🟢 Online Status & Device
+├ 👥 Followers Count
+├ 👤 Following Count
+└ 📊 Tenure
+
+💎 *Subscription Details (12)*
+├ 📛 Plan Name
+├ 🌟 Ultimate Status
+├ 🎮 Game Pass Status
+├ 💎 Gold Status
+├ 🎯 EA Play Status
+├ 💬 Discord Nitro
+├ 💰 Monthly/Yearly Price
+├ 📅 Expiry Date
+├ 🔄 Auto-Renew Status
+├ 💳 Payment Method
+├ 🆔 Subscription ID
+└ 🎁 Included Perks
+
+🎯 *Gaming Statistics (15)*
+├ 🏆 Gamerscore
+├ 📈 Total Achievements
+├ ⏱️ Total Playtime
+├ 🎮 Games Played Count
+├ 📊 Completion Rate
+├ 🎯 Favorite Genre
+├ 🏅 Most Played Game
+├ 🎲 Game Details per Game
+├ 📅 Last Played Dates
+├ 📈 Hours per Game
+├ 🏆 Achievements per Game
+├ 📊 Genre Breakdown
+├ 🎮 Game Pass Games Count
+├ 💎 Rare Achievements
+└ 📈 Achievement Score
+
+🏆 *Achievement Details (10)*
+├ 🔥 Recent Achievements
+├ 💎 Legendary Achievements
+├ ⚡ Epic Achievements
+├ 🔥 Rare Achievements
+├ 📈 Completion Rate
+├ ⭐ Average Rarity
+├ 📊 Achievement Points
+├ 📅 Unlock Dates
+├ 🎮 Per Game Breakdown
+└ 🎯 Achievement Categories
+
+👥 *Social Data (15)*
+├ 👥 Friends Count
+├ 🟢 Friends Online
+├ 🤝 Mutual Friends
+├ ⏳ Pending Requests
+├ 📊 Followers Count
+├ 📈 Recent Followers
+├ 👤 Following Count
+├ 🆕 Recent Following
+├ 🏰 Clubs Joined
+├ 👑 Club Roles
+├ 📈 Recent Activity Feed
+├ ⭐ Reputation Status
+├ 📊 Reports Count
+├ 💬 Feedback Score
+└ 🕒 Activity Timeline
+
+📸 *Media Statistics (5)*
+├ 📸 Screenshots Count
+├ 🎥 Game Clips Count
+├ 📡 Broadcasts Count
+├ 💾 Storage Used
+├ 🆕 Recent Captures
+
+💰 *Value Analysis (5)*
+├ 💰 Yearly Subscription Value
+├ 🎮 Games Library Value
+├ 💎 Total Account Value
+├ 📊 Account Score (0-100)
+├ ⭐ Recommendation
+
+⚡ *Additional Features*
+├ 📁 Batch Processing (500 accounts)
+├ 📥 Downloadable Reports
+├ 📊 Progress Tracking
+├ ⏱️ Processing Speed
+├ 🎯 Error Analysis
+├ 📈 Usage Statistics
+└ 🎨 Beautiful Formatting
+
+══════════════════════════════════════════════
+_Total: 30+ data points per account!_
+        """
+        await update.message.reply_text(features_text, parse_mode=ParseMode.MARKDOWN)
+    
+    async def help(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Help command"""
+        help_text = """
+📚 *DETAILED HELP GUIDE*
+═══════════════════════════════════════════
+
+🔍 *Single Check*
+────────────────────────────
+Send: `email:password` or `email|password`
+Example: `gamer@gmail.com:pass123`
+
+📁 *Batch Processing*
+────────────────────────────
+1. Create `.txt` file
+2. Add one account per line
+3. Upload file here
+
+Supported formats:
+• `email:password`
+• `email|password`
+• One per line
+• Max 500 accounts
+
+📊 *What You Get*
+────────────────────────────
+• Complete profile (30+ data points)
+• Subscription details
+• Gaming statistics
+• Achievement breakdown
+• Social activity
+• Media stats
+• Account value
+• Professional report
+
+📋 *Commands*
+────────────────────────────
+/start   - Welcome
+/help    - This guide
+/features - All features
+/status  - Your usage
+/about   - Bot info
+
+⚡ *Limits*
+────────────────────────────
+• 10,000 requests/day
+• 500 accounts/batch
+• 2MB file size
+
+💡 *Pro Tips*
+────────────────────────────
+• Check /status before large batches
+• Download reports for analysis
+• Use real Microsoft accounts
+• Invalid accounts show error reasons
+
+═══════════════════════════════════════
+        """
+        await update.message.reply_text(help_text, parse_mode=ParseMode.MARKDOWN)
+    
+    async def about(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """About command"""
+        uptime = datetime.now() - self.start_time
+        days = uptime.days
+        hours = uptime.seconds // 3600
+        minutes = (uptime.seconds % 3600) // 60
+        
+        about_text = f"""
+🤖 *ABOUT XBOX ULTIMATE BOT*
+═══════════════════════════════════════
+
+*Version:* 4.0 (Complete Edition)
+*Author:* @YourUsername
+*Type:* Advanced Account Checker
+*Status:* 🟢 Online
+
+📊 *Statistics*
+────────────────────────────
+• Uptime: {days}d {hours}h {minutes}m
+• Total Checks: {self.total_checks:,}
+• Active Users: {len(self.active_users)}
+• Daily Limit: 10,000/user
+
+✨ *Features (30+ Data Points)*
+────────────────────────────
+✓ Basic Profile (10)
+✓ Subscription (12)
+✓ Gaming Stats (15)
+✓ Achievements (10)
+✓ Social Data (15)
+✓ Media Stats (5)
+✓ Value Analysis (5)
+
+⚡ *Performance*
+────────────────────────────
+• Response: < 1 second
+• Batch Speed: 20/sec
+• File Support: .txt (2MB)
+• Max Batch: 500 accounts
+
+📱 *Compatibility*
+────────────────────────────
+• Works on all devices
+• Mobile friendly
+• No API required
+• 100% working
+
+═══════════════════════════════════════
+_Made with ❤️ for Xbox community_
+        """
+        await update.message.reply_text(about_text, parse_mode=ParseMode.MARKDOWN)
+    
+    async def status(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Status command"""
+        user_id = update.effective_user.id
+        status = rate_limiter.get_status(user_id)
+        
+        # Create progress bar
+        filled = int(20 * status["used"] / status["total"])
+        bar = "█" * filled + "░" * (20 - filled)
+        
+        status_text = f"""
+📊 *YOUR USAGE STATUS*
+═══════════════════════════════════════
+
+📈 *Today's Usage*
+────────────────────────────
+Used: `{status['used']}` / `{status['total']}` requests
+{bar} {status['percentage']:.1f}%
+
+⚡ Remaining: `{status['remaining']}`
+🔄 Resets in: `{status['reset_in']}`
+
+📅 *Account History*
+────────────────────────────
+First Seen: `{status['first_seen']}`
+Total Requests: `{status['total_requests']:,}`
+Total Checks: `{status['total_checks']:,}`
+
+💡 *Batch Recommendations*
+────────────────────────────
+• Small batch: 50-100 accounts
+• Medium batch: 100-250 accounts
+• Large batch: 250-500 accounts
+
+═══════════════════════════════════════
+_Plan your usage wisely!_
+        """
+        await update.message.reply_text(status_text, parse_mode=ParseMode.MARKDOWN)
+    
+    async def handle_single(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle single email:password"""
+        text = update.message.text.strip()
+        user_id = update.effective_user.id
+        
+        # Check rate limit
+        allowed, remaining, user_stats = rate_limiter.check(user_id)
+        if not allowed:
+            wait_hours = remaining // 3600
+            wait_minutes = (remaining % 3600) // 60
+            await update.message.reply_text(
+                f"⏳ *Daily Limit Reached*\n\n"
+                f"Wait {wait_hours}h {wait_minutes}m for reset.\n"
+                f"Limit: 10,000 requests/day",
+                parse_mode=ParseMode.MARKDOWN
+            )
+            return
+        
+        # Parse credentials
+        if ':' not in text and '|' not in text:
+            await update.message.reply_text(
+                "❌ *Invalid Format*\n\n"
+                "Use: `email:password` or `email|password`\n"
+                "Example: `gamer@gmail.com:pass123`",
+                parse_mode=ParseMode.MARKDOWN
+            )
+            return
+        
+        try:
+            if ':' in text:
+                email, password = text.split(':', 1)
+            else:
+                email, password = text.split('|', 1)
+            
+            email = email.strip()
+            password = password.strip()
+            
+            if not email or not password:
+                await update.message.reply_text("❌ Email and password cannot be empty!")
+                return
+        except:
+            await update.message.reply_text("❌ Error parsing credentials!")
+            return
+        
+        # Send typing action
+        await update.message.chat.send_action(action="typing")
+        
+        status_msg = await update.message.reply_text("🔄 *Checking account...*", parse_mode=ParseMode.MARKDOWN)
+        
+        try:
+            result = self.checker.check_account(email, password)
+            self.total_checks += 1
+            
+            # Update user stats
+            if user_id in rate_limiter.user_stats:
+                rate_limiter.user_stats[user_id]["total_checks"] += 1
+            
+            formatted = self.formatter.single_result(result)
+            
+            # Add remaining
+            remaining = rate_limiter.get_status(user_id)['remaining']
+            formatted += f"\n\n_You have {remaining} requests remaining today_"
+            
+            await status_msg.edit_text(formatted, parse_mode=ParseMode.MARKDOWN)
+            
+        except Exception as e:
+            logger.error(f"Error: {e}")
+            await status_msg.edit_text(f"❌ Error: {str(e)[:100]}")
+    
+    async def handle_file(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle uploaded file"""
+        user_id = update.effective_user.id
+        document = update.message.document
+        
+        # Check file type
+        if not document.file_name.endswith('.txt'):
+            await update.message.reply_text("❌ Please upload a `.txt` file!")
+            return
+        
+        # Check file size
+        if document.file_size > MAX_FILE_SIZE:
+            await update.message.reply_text(f"❌ File too big! Max {MAX_FILE_SIZE//1024//1024}MB")
+            return
+        
+        status_msg = await update.message.reply_text("📥 *Downloading file...*", parse_mode=ParseMode.MARKDOWN)
+        
+        try:
+            file = await context.bot.get_file(document.file_id)
+            content = await file.download_as_bytearray()
+            text = content.decode('utf-8', errors='ignore')
+            
+            # Parse credentials
+            credentials = []
+            lines = text.strip().split('\n')
+            
+            for line in lines:
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                
+                if ':' in line:
+                    email, pwd = line.split(':', 1)
+                elif '|' in line:
+                    email, pwd = line.split('|', 1)
+                else:
+                    continue
+                
+                email = email.strip()
+                pwd = pwd.strip()
+                
+                if email and pwd and '@' in email:
+                    credentials.append((email, pwd))
+            
+            if not credentials:
+                await status_msg.edit_text("❌ No valid credentials found in file!")
+                return
+            
+            # Check rate limit
+            allowed, remaining, _ = rate_limiter.check(user_id, len(credentials))
+            if not allowed:
+                wait_hours = remaining // 3600
+                wait_minutes = (remaining % 3600) // 60
+                await status_msg.edit_text(
+                    f"⏳ *Daily Limit Reached*\n\n"
+                    f"Need {len(credentials)} requests but only {remaining} remaining.\n"
+                    f"Wait {wait_hours}h {wait_minutes}m or try smaller batch.",
+                    parse_mode=ParseMode.MARKDOWN
+                )
+                return
+            
+            # Process
+            await status_msg.edit_text(
+                f"🔄 *Processing {len(credentials)} accounts...*\n"
+                f"⏱️ Estimated time: {len(credentials) * 0.1:.0f} seconds",
+                parse_mode=ParseMode.MARKDOWN
+            )
+            
+            start = time.time()
+            stats = self.checker.check_batch(credentials)
+            elapsed = time.time() - start
+            stats['process_time'] = elapsed
+            
+            self.total_checks += len(credentials)
+            
+            # Update user stats
+            if user_id in rate_limiter.user_stats:
+                rate_limiter.user_stats[user_id]["total_checks"] += len(credentials)
+            
+            # Store for download
+            context.user_data['last_results'] = stats['results']
+            context.user_data['last_stats'] = stats
+            context.user_data['last_filename'] = document.file_name
+            
+            # Format summary
+            summary = self.formatter.batch_summary(stats)
+            summary += f"\n⏱️ *Processing Time:* `{elapsed:.1f} seconds`"
+            
+            # Buttons
+            keyboard = [
+                [InlineKeyboardButton("📥 Download Complete Report", callback_data="download")],
+                [InlineKeyboardButton("🔄 New Batch", callback_data="new_batch")],
+                [InlineKeyboardButton("📊 View Features", callback_data="features")]
+            ]
+            
+            await status_msg.edit_text(
+                summary,
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+            
+        except Exception as e:
+            logger.error(f"File error: {e}")
+            await status_msg.edit_text(f"❌ Error: {str(e)[:100]}")
+    
+    async def button_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle button callbacks"""
+        query = update.callback_query
+        await query.answer()
+        
+        if query.data == "download":
+            results = context.user_data.get('last_results', [])
+            stats = context.user_data.get('last_stats', {})
+            filename = context.user_data.get('last_filename', 'batch.txt')
+            
+            if not results:
+                await query.message.reply_text("❌ No results to download!")
+                return
+            
+            # Generate report
+            report = self.formatter.generate_report(results, stats, filename)
+            
+            # Send file
+            file_obj = io.BytesIO(report.encode('utf-8'))
+            file_obj.name = f"xbox_complete_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+            
+            await query.message.reply_document(
+                document=file_obj,
+                caption="📊 **Complete Report with 30+ Data Points!**"
+            )
+        
+        elif query.data == "new_batch":
+            await query.message.reply_text(
+                "📁 Upload your `.txt` file with one email:password per line.\n\n"
+                "Format:\n"
+                "`email1:password1`\n"
+                "`email2|password2`\n"
+                "`email3:password3`\n\n"
+                "Max 500 accounts per batch."
+            )
+        
+        elif query.data == "features":
+            await self.features(update, context)
+    
+    async def error_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle errors"""
+        logger.error(f"Error: {context.error}")
+        try:
+            if update and update.message:
+                await update.message.reply_text(
+                    "❌ An error occurred. Please try again."
+                )
+        except:
+            pass
+
+# ============================================
+# MAIN
+# ============================================
+
+def main():
+    """Main function"""
+    print("=" * 80)
+    print("XBOX ULTIMATE BOT - COMPLETE EDITION")
+    print("=" * 80)
+    print("30+ Data Points • Batch 500 • 10k/day • Professional Reports")
+    print("=" * 80)
+    
+    if BOT_TOKEN == 'YOUR_BOT_TOKEN_HERE':
+        print("❌ ERROR: Set your BOT_TOKEN first!")
+        print("Get it from @BotFather on Telegram")
+        return
+    
+    print(f"✅ Bot Token: {BOT_TOKEN[:10]}...{BOT_TOKEN[-5:]}")
+    print(f"✅ Daily Limit: {REQUESTS_PER_DAY} requests/user")
+    print(f"✅ Max Batch: {MAX_BATCH_SIZE} accounts")
+    print(f"✅ Features: 30+ Data Points per Account")
+    print()
+    
+    # Start Flask
+    flask_thread = threading.Thread(target=lambda: app.run(host='0.0.0.0', port=8080), daemon=True)
+    flask_thread.start()
+    print("🌐 Flask server running")
+    print()
+    
+    # Create bot
+    bot = XboxBot()
+    application = Application.builder().token(BOT_TOKEN).build()
+    
+    # Add handlers
+    application.add_handler(CommandHandler("start", bot.start))
+    application.add_handler(CommandHandler("help", bot.help))
+    application.add_handler(CommandHandler("about", bot.about))
+    application.add_handler(CommandHandler("status", bot.status))
+    application.add_handler(CommandHandler("features", bot.features))
+    application.add_handler(CommandHandler("stats", bot.status))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, bot.handle_single))
+    application.add_handler(MessageHandler(filters.Document.FileExtension("txt"), bot.handle_file))
+    application.add_handler(CallbackQueryHandler(bot.button_callback))
+    application.add_error_handler(bot.error_handler)
+    
+    # Start
+    print("🤖 Bot is running! Press Ctrl+C to stop")
+    print("=" * 80)
+    application.run_polling()
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\n👋 Bot stopped")
+    except Exception as e:
+        print(f"\n❌ Error: {e}")
