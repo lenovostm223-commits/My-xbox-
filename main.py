@@ -1,4 +1,4 @@
-kya#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 XBOX BOT - Complete Version with Email:Password + TXT File Support + Enhanced Download
 All Features Included - Nothing Removed
