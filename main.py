@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+kya#!/usr/bin/env python3
 """
 XBOX BOT - Complete Version with Email:Password + TXT File Support + Enhanced Download
 All Features Included - Nothing Removed
@@ -884,3 +884,378 @@ Send `email:password` directly
 
 📁 *Batch Check*
 Upload `.txt` file with format:
+            
+📊 *Other Commands*
+/start - Welcome message
+/help - This help menu
+/limit - Check remaining requests
+/stats - Bot statistics
+
+⚡ *Features*
+• ✅ Email:Password validation
+• 🎮 Game Pass detection
+• 🌟 Ultimate detection
+• 🏆 Gamerscore tracking
+• 📥 Enhanced download with full stats
+• 📊 Professional formatted reports
+
+⚡ *Limits*
+• {REQUESTS_PER_HOUR} requests/hour per user
+• Max {MAX_BATCH_SIZE} accounts per batch
+• Cache: 5 minutes
+            """,
+            parse_mode=ParseMode.MARKDOWN
+        )
+    
+    async def limit(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Check rate limit"""
+        user_id = update.effective_user.id
+        remaining = rate_limiter.get_remaining(user_id)
+        
+        await update.message.reply_text(
+            f"""
+📊 *YOUR RATE LIMIT STATUS*
+═══════════════════════════
+
+✅ Remaining: `{remaining}/{REQUESTS_PER_HOUR}`
+🔄 Resets: Every hour
+⚡ Used: `{REQUESTS_PER_HOUR - remaining}` requests
+
+_Plan accordingly for batch processing_
+            """,
+            parse_mode=ParseMode.MARKDOWN
+        )
+    
+    async def stats(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Bot statistics"""
+        uptime = datetime.now() - self.start_time
+        hours = uptime.total_seconds() // 3600
+        minutes = (uptime.total_seconds() % 3600) // 60
+        active_users = len(rate_limiter.users)
+        
+        await update.message.reply_text(
+            f"""
+📊 *BOT STATISTICS*
+═══════════════════════
+
+⏱️ Uptime: `{int(hours)}h {int(minutes)}m`
+📊 Total Checks: `{self.total_checks}`
+👥 Active Users: `{active_users}`
+💾 Cache Size: `{len(cache.cache)}`
+
+⚡ Rate Limits:
+• `{REQUESTS_PER_HOUR}`/hour per user
+• Max batch: `{MAX_BATCH_SIZE}` accounts
+• Cache: `{CACHE_TIMEOUT//60}` minutes
+
+📁 Features:
+• Single check ✅
+• Batch processing ✅
+• Enhanced download ✅
+• Full statistics ✅
+            """,
+            parse_mode=ParseMode.MARKDOWN
+        )
+    
+    async def handle_single(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle single email:password"""
+        text = update.message.text.strip()
+        user_id = update.effective_user.id
+        
+        # Check rate limit
+        allowed, remaining = rate_limiter.is_allowed(user_id)
+        if not allowed:
+            wait_min = remaining // 60
+            wait_sec = remaining % 60
+            await update.message.reply_text(
+                f"⏳ Rate limit reached! Wait {wait_min}m {wait_sec}s",
+                parse_mode=ParseMode.MARKDOWN
+            )
+            return
+        
+        # Parse credentials
+        if ':' not in text:
+            await update.message.reply_text("❌ Invalid format! Use `email:password`")
+            return
+        
+        try:
+            email, password = text.split(':', 1)
+            email = email.strip()
+            password = password.strip()
+            
+            if not email or not password:
+                await update.message.reply_text("❌ Email and password required!")
+                return
+                
+        except Exception as e:
+            await update.message.reply_text(f"❌ Error: {e}")
+            return
+        
+        # Send typing action
+        await update.message.chat.send_action(action="typing")
+        
+        # Initial message
+        status_msg = await update.message.reply_text(
+            f"🔍 Checking `{email}`...",
+            parse_mode=ParseMode.MARKDOWN
+        )
+        
+        try:
+            # Check account
+            result = await self.checker.check_single(email, password)
+            self.total_checks += 1
+            
+            # Format result
+            formatted = self.checker.format_single_result(result)
+            
+            # Add remaining
+            remaining = rate_limiter.get_remaining(user_id)
+            formatted += f"\n\n_You have {remaining} requests remaining_"
+            
+            await status_msg.edit_text(
+                formatted,
+                parse_mode=ParseMode.MARKDOWN
+            )
+            
+        except Exception as e:
+            logger.error(f"Error: {e}")
+            await status_msg.edit_text(f"❌ Error: {str(e)[:100]}")
+    
+    async def handle_file(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle uploaded txt file"""
+        user_id = update.effective_user.id
+        document = update.message.document
+        
+        # Check if it's a text file
+        if not document.file_name.endswith('.txt'):
+            await update.message.reply_text("❌ Please upload a `.txt` file!")
+            return
+        
+        # Check file size
+        if document.file_size > MAX_FILE_SIZE:
+            await update.message.reply_text(f"❌ File too big! Max {MAX_FILE_SIZE//1024}KB")
+            return
+        
+        # Send initial message
+        status_msg = await update.message.reply_text(
+            "📥 *Downloading file...*",
+            parse_mode=ParseMode.MARKDOWN
+        )
+        
+        try:
+            # Download file
+            file = await context.bot.get_file(document.file_id)
+            file_content = await file.download_as_bytearray()
+            content = file_content.decode('utf-8', errors='ignore')
+            
+            # Parse credentials
+            credentials = self.checker.parse_txt_file(content)
+            
+            if not credentials:
+                await status_msg.edit_text("❌ No valid credentials found in file!")
+                return
+            
+            # Check rate limit for batch
+            allowed, remaining = rate_limiter.is_allowed(user_id, len(credentials))
+            if not allowed:
+                wait_min = remaining // 60
+                wait_sec = remaining % 60
+                await status_msg.edit_text(
+                    f"⏳ Rate limit! Need {len(credentials)} requests.\n"
+                    f"Wait {wait_min}m {wait_sec}s or try fewer accounts.",
+                    parse_mode=ParseMode.MARKDOWN
+                )
+                return
+            
+            # Update status
+            await status_msg.edit_text(
+                f"🔄 *Processing {len(credentials)} accounts...*\n"
+                f"⏱️ Estimated time: {len(credentials) * 0.5:.0f} seconds",
+                parse_mode=ParseMode.MARKDOWN
+            )
+            
+            # Process batch
+            start_time = time.time()
+            summary = await self.checker.check_batch(credentials)
+            process_time = time.time() - start_time
+            
+            self.total_checks += len(credentials)
+            
+            # Format summary
+            summary_text = self.checker.format_summary(summary)
+            
+            # Add remaining
+            remaining = rate_limiter.get_remaining(user_id)
+            summary_text = summary_text.replace("_You have 0 requests remaining_", f"_You have {remaining} requests remaining_")
+            
+            # Store results in context for download
+            context.user_data['last_results'] = summary['results']
+            context.user_data['last_batch_info'] = {
+                'filename': document.file_name,
+                'process_time': round(process_time, 1),
+                'total': len(credentials)
+            }
+            
+            # Create keyboard for downloading results
+            keyboard = [
+                [InlineKeyboardButton("📥 DOWNLOAD ENHANCED RESULTS", callback_data="download_results")],
+                [InlineKeyboardButton("🔄 NEW BATCH", callback_data="new_batch")]
+            ]
+            
+            await status_msg.edit_text(
+                summary_text,
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+            
+        except Exception as e:
+            logger.error(f"File processing error: {e}")
+            await status_msg.edit_text(f"❌ Error processing file: {str(e)[:100]}")
+    
+    async def button_callback(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle button callbacks"""
+        query = update.callback_query
+        await query.answer()
+        
+        if query.data == "download_results":
+            results = context.user_data.get('last_results', [])
+            batch_info = context.user_data.get('last_batch_info', {})
+            
+            if not results:
+                await query.message.reply_text("❌ No results to download! Process a file first.")
+                return
+            
+            # Send typing action
+            await query.message.chat.send_action(action="typing")
+            
+            # Generate enhanced results file
+            output = await self.checker.generate_enhanced_results_file(
+                results=results,
+                filename=batch_info.get('filename', 'batch_results.txt'),
+                batch_info=batch_info
+            )
+            
+            # Create file and send
+            file_obj = io.BytesIO(output.encode('utf-8'))
+            file_obj.name = f"xbox_enhanced_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+            
+            await query.message.reply_document(
+                document=file_obj,
+                caption="📊 **Enhanced Full Report** with complete statistics and analysis!"
+            )
+        
+        elif query.data == "new_batch":
+            await query.message.reply_text(
+                "📁 Upload your `.txt` file with email:password combinations.\n\n"
+                "Format:\n"
+                "`email1:password1`\n"
+                "`email2|password2`\n"
+                "One per line."
+            )
+    
+    async def error_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Handle errors"""
+        logger.error(f"Update {update} caused error {context.error}")
+        
+        try:
+            if update and update.message:
+                await update.message.reply_text(
+                    "❌ An error occurred. Please try again later."
+                )
+        except:
+            pass
+
+# ============================================
+# MAIN FUNCTION
+# ============================================
+
+def run_bot():
+    """Run the bot"""
+    # Create API client
+    api_client = XBLIOClient(XBL_API_KEY)
+    
+    # Create bot
+    bot = XboxBot(api_client)
+    
+    # Create application
+    application = Application.builder().token(BOT_TOKEN).build()
+    
+    # Add handlers
+    application.add_handler(CommandHandler("start", bot.start))
+    application.add_handler(CommandHandler("help", bot.help))
+    application.add_handler(CommandHandler("limit", bot.limit))
+    application.add_handler(CommandHandler("stats", bot.stats))
+    
+    # Handle text messages (single email:password)
+    application.add_handler(MessageHandler(
+        filters.TEXT & ~filters.COMMAND & ~filters.Document.ALL,
+        bot.handle_single
+    ))
+    
+    # Handle document uploads (txt files)
+    application.add_handler(MessageHandler(
+        filters.Document.FileExtension("txt"),
+        bot.handle_file
+    ))
+    
+    # Handle callbacks
+    application.add_handler(CallbackQueryHandler(bot.button_callback))
+    
+    # Error handler
+    application.add_error_handler(bot.error_handler)
+    
+    # Start bot
+    logger.info("Bot started successfully!")
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
+
+def main():
+    """Main function"""
+    print("=" * 60)
+    print("XBOX ULTIMATE BOT - COMPLETE EDITION")
+    print("=" * 60)
+    print("Features: Email:Password + TXT File + Enhanced Download")
+    print("=" * 60)
+    
+    # Check configuration
+    if BOT_TOKEN == 'YOUR_BOT_TOKEN_HERE':
+        print("❌ ERROR: BOT_TOKEN not set!")
+        print("Get it from @BotFather on Telegram")
+        return
+    
+    if XBL_API_KEY == 'YOUR_XBL_API_KEY_HERE':
+        print("❌ ERROR: XBL_API_KEY not set!")
+        print("Get it from https://xbl.io")
+        return
+    
+    print(f"✅ Bot Token: {BOT_TOKEN[:10]}...{BOT_TOKEN[-5:]}")
+    print(f"✅ XBL API Key: {XBL_API_KEY[:10]}...{XBL_API_KEY[-5:]}")
+    print(f"✅ Admin IDs: {ADMIN_IDS}")
+    print(f"✅ Rate Limit: {REQUESTS_PER_HOUR}/hour per user")
+    print(f"✅ Max Batch: {MAX_BATCH_SIZE} accounts")
+    print(f"✅ Enhanced Download: Active")
+    print()
+    
+    # Start Flask in a thread
+    flask_thread = threading.Thread(target=lambda: app.run(host='0.0.0.0', port=8080, debug=False), daemon=True)
+    flask_thread.start()
+    print("🌐 Flask server running on port 8080")
+    print("📊 Web interface: https://your-replit-name.repl.co")
+    print()
+    
+    # Run bot
+    print("🤖 Starting bot... Press Ctrl+C to stop")
+    print("=" * 60)
+    
+    try:
+        run_bot()
+    except Exception as e:
+        logger.error(f"Bot error: {e}")
+        print(f"❌ Bot error: {e}")
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\n👋 Bot stopped by user")
+    except Exception as e:
+        print(f"\n❌ Fatal error: {e}")
